@@ -1,7 +1,17 @@
 import express from 'express';
 import http from 'http';
 import { WebSocketServer } from 'ws';
-import TikTokLiveConnector from 'tiktok-live-connector';
+import * as tiktok from 'tiktok-live-connector';
+
+console.log('[BRIDGE] Exports do tiktok-live-connector:', Object.keys(tiktok));
+
+const TikTokLiveConnector = tiktok.TikTokLiveConnector || tiktok.default || tiktok;
+
+if (!TikTokLiveConnector) {
+  console.error('[BRIDGE] ERRO: NÃ£o encontrou TikTokLiveConnector nos exports');
+  console.error('[BRIDGE] Exports completos:', tiktok);
+  process.exit(1);
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -57,7 +67,6 @@ tiktokClient.on('chat', (data) => {
   const nickname = user.uniqueId || user.nickname || user.unique_id || user.userName || user.name || 'Anonimo';
   const comment = data.text || data.comment || data.content || user.comment || '';
 
-  // Extrai avatar bruto (pode vir string ou objeto)
   const rawAvatar = user.avatarThumb
     || user.avatarMedium
     || user.avatarLarge
@@ -70,7 +79,6 @@ tiktokClient.on('chat', (data) => {
     || (user.profile && user.profile.avatarUrl)
     || '';
 
-  // FORÃ‡A STRING - se vier objeto, extrai URL
   const avatar = typeof rawAvatar === 'string' ? rawAvatar
     : (rawAvatar?.url || rawAvatar?.uri || rawAvatar?.href || rawAvatar?.download_url || '');
 
