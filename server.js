@@ -5,19 +5,18 @@ import * as tiktok from 'tiktok-live-connector';
 
 console.log('[BRIDGE] Exports do tiktok-live-connector:', Object.keys(tiktok));
 
-// Tenta vÃ¡rias possÃ­veis exportaÃ§Ãµes da classe principal
-const TikTokLiveConnector = 
+const TikTokLiveConnection =
+  tiktok.TikTokLiveConnection ||
   tiktok.TikTokLiveConnector ||
   tiktok.TikTokLiveClient ||
-  tiktok.TikTokLiveConnection ||
   tiktok.TikTokLive ||
   tiktok.LiveConnector ||
   tiktok.Connector ||
   tiktok.default ||
   tiktok;
 
-if (!TikTokLiveConnector || typeof TikTokLiveConnector !== 'function') {
-  console.error('[BRIDGE] ERRO: NÃ£o encontrou classe construtora nos exports');
+if (!TikTokLiveConnection || typeof TikTokLiveConnection !== 'function') {
+  console.error('[BRIDGE] ERRO: Não encontrou classe construtora nos exports');
   console.error('[BRIDGE] Exports completos (primeiros 20):', Object.keys(tiktok).slice(0, 20));
   console.error('[BRIDGE] Tipo de cada export:', Object.fromEntries(
     Object.entries(tiktok).slice(0, 10).map(([k, v]) => [k, typeof v])
@@ -25,7 +24,7 @@ if (!TikTokLiveConnector || typeof TikTokLiveConnector !== 'function') {
   process.exit(1);
 }
 
-console.log('[BRIDGE] Usando construtor:', TikTokLiveConnector.name || 'anonymous');
+console.log('[BRIDGE] Usando construtor:', TikTokLiveConnection.name || 'anonymous');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,8 +42,7 @@ function broadcast(msg) {
   });
 }
 
-wss.on('connection', (ws) => {
-  clients.add(ws);
+wss.on('connection', (ws) => {                                                                                     clients.add(ws);
   console.log('[BRIDGE] Cliente conectado. Total:', clients.size);
   ws.send(JSON.stringify({ type: 'bridge_status', connected: true }));
 
@@ -56,7 +54,11 @@ wss.on('connection', (ws) => {
 
 app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));
 
-const tiktokClient = new TikTokLiveConnector(TIKTOK_USERNAME);
+// Construtor com options object (não string)
+const tiktokClient = new TikTokLiveConnection({
+  username: TIKTOK_USERNAME,
+  processInitialData: true
+});
 
 console.log('[BRIDGE] Conectando ao TikTok:', TIKTOK_USERNAME);
 
@@ -65,11 +67,9 @@ tiktokClient.connect().then(() => {
   broadcast({ type: 'bridge_status', connected: true });
 }).catch(err => {
   console.error('[BRIDGE] Erro ao conectar:', err.message);
-  broadcast({ type: 'bridge_status', connected: false, error: err.message });
-});
+  broadcast({ type: 'bridge_status', connected: false, error: err.message });                                    });
 
-// DEBUG: loga TODOS os eventos que chegam do TikTok
-tiktokClient.on('*', (eventName, data) => {
+// DEBUG: loga TODOS os eventos que chegam do TikTok                                                             tiktokClient.on('*', (eventName, data) => {
   console.log('[BRIDGE DEBUG] Evento:', eventName, JSON.stringify(data).slice(0, 300));
 });
 
