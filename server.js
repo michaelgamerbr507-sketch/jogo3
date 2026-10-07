@@ -1,7 +1,7 @@
-const express = require('express');
-const http = require('http');
-const { WebSocketServer } = require('ws');
-const { TikTokLiveConnector } = require('tiktok-live-connector');
+import express from 'express';
+import http from 'http';
+import { WebSocketServer } from 'ws';
+import { TikTokLiveConnector } from 'tiktok-live-connector';
 
 const app = express();
 const server = http.createServer(app);
