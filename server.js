@@ -5,13 +5,27 @@ import * as tiktok from 'tiktok-live-connector';
 
 console.log('[BRIDGE] Exports do tiktok-live-connector:', Object.keys(tiktok));
 
-const TikTokLiveConnector = tiktok.TikTokLiveConnector || tiktok.default || tiktok;
+// Tenta vÃ¡rias possÃ­veis exportaÃ§Ãµes da classe principal
+const TikTokLiveConnector = 
+  tiktok.TikTokLiveConnector ||
+  tiktok.TikTokLiveClient ||
+  tiktok.TikTokLiveConnection ||
+  tiktok.TikTokLive ||
+  tiktok.LiveConnector ||
+  tiktok.Connector ||
+  tiktok.default ||
+  tiktok;
 
-if (!TikTokLiveConnector) {
-  console.error('[BRIDGE] ERRO: NÃ£o encontrou TikTokLiveConnector nos exports');
-  console.error('[BRIDGE] Exports completos:', tiktok);
+if (!TikTokLiveConnector || typeof TikTokLiveConnector !== 'function') {
+  console.error('[BRIDGE] ERRO: NÃ£o encontrou classe construtora nos exports');
+  console.error('[BRIDGE] Exports completos (primeiros 20):', Object.keys(tiktok).slice(0, 20));
+  console.error('[BRIDGE] Tipo de cada export:', Object.fromEntries(
+    Object.entries(tiktok).slice(0, 10).map(([k, v]) => [k, typeof v])
+  ));
   process.exit(1);
 }
+
+console.log('[BRIDGE] Usando construtor:', TikTokLiveConnector.name || 'anonymous');
 
 const app = express();
 const server = http.createServer(app);
