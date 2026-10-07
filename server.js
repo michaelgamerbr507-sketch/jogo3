@@ -1,77 +1,53 @@
-import { TikTokLiveConnection } from 'tiktok-live-connector';
-import { WebSocketServer } from 'ws';
-import express from 'express';
-import cors from 'cors';
-import { createServer } from 'http';
+const express = require('express');
+const http = require('http');
+const { WebSocketServer } = require('ws');
+const { TikTokLiveConnector } = require('tiktok-live-connector');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
 
-const server = createServer(app);
-const wss = new WebSocketServer({ noServer: true });
+const PORT = process.env.PORT || 10000;
+const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || 'ilustramichael';
 
-let tiktokClient = null;
-const clients = new Set();
+let clients = new Set();
 
-function broadcast(event) {
-  const msg = JSON.stringify(event);
-  for (const client of clients) {
-    if (client.readyState === 1) client.send(msg);
-  }
-  console.log('[BRIDGE] Broadcast:', event.type, event.nickname || '');
-}
-
-server.on('upgrade', (request, socket, head) => {
-  wss.handleUpgrade(request, socket, head, (ws) => {
-    wss.emit('connection', ws, request);
+function broadcast(msg) {
+  const data = JSON.stringify(msg);
+  clients.forEach(ws => {
+    if (ws.readyState === 1) ws.send(data);
   });
-});
+}
 
 wss.on('connection', (ws) => {
   clients.add(ws);
   console.log('[BRIDGE] Cliente conectado. Total:', clients.size);
+  ws.send(JSON.stringify({ type: 'bridge_status', connected: true }));
 
   ws.on('close', () => {
     clients.delete(ws);
     console.log('[BRIDGE] Cliente desconectado. Total:', clients.size);
   });
-
-  ws.on('error', (err) => {
-    console.error('[BRIDGE] Erro no cliente:', err.message);
-    clients.delete(ws);
-  });
 });
 
-async function connectTikTok(username) {
-  if (tiktokClient) {
-    try { await tiktokClient.disconnect(); } catch {}
-    tiktokClient = null;
-  }
+app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));
 
-  const cleanUsername = username.replace('@', '').trim();
-  if (!cleanUsername) throw new Error('Username vazio');
+const tiktokClient = new TikTokLiveConnector(TIKTOK_USERNAME);
 
-  console.log('[BRIDGE] Conectando ao TikTok:', cleanUsername);
-  tiktokClient = new TikTokLiveConnection(cleanUsername, {
-    fetchRoomInfoOnConnect: false,
-    processInitialData: false
-  });
+console.log('[BRIDGE] Conectando ao TikTok:', TIKTOK_USERNAME);
 
-  tiktokClient.on('connected', () => {
-    console.log('[BRIDGE] Conectado ao TikTok Live:', cleanUsername);
-    broadcast({ type: 'bridge_status', status: 'connected', username: cleanUsername });
-  });
+tiktokClient.connect().then(() => {
+  console.log('[BRIDGE] Conectado ao TikTok Live:', TIKTOK_USERNAME);
+  broadcast({ type: 'bridge_status', connected: true });
+}).catch(err => {
+  console.error('[BRIDGE] Erro ao conectar:', err.message);
+  broadcast({ type: 'bridge_status', connected: false, error: err.message });
+});
 
-  tiktokClient.on('disconnected', (reason) => {
-    console.log('[BRIDGE] Desconectado:', reason);
-    broadcast({ type: 'bridge_status', status: 'disconnected', reason });
-  });
-
-  tiktokClient.on('error', (err) => {
-    console.error('[BRIDGE] Erro TikTok:', err.message);
-    broadcast({ type: 'bridge_status', status: 'error', error: err.message });
-  });
+// DEBUG: loga TODOS os eventos que chegam do TikTok
+tiktokClient.on('*', (eventName, data) => {
+  console.log('[BRIDGE DEBUG] Evento:', eventName, JSON.stringify(data).slice(0, 300));
+});
 
 tiktokClient.on('chat', (data) => {
   console.log('[BRIDGE] Chat data completo:', JSON.stringify(data, null, 2));
@@ -110,83 +86,9 @@ tiktokClient.on('chat', (data) => {
     userId
   });
 });
-  tiktokClient.on('gift', (data) => {
-    broadcast({
-      type: 'gift',
-      nickname: data.uniqueId || data.nickname || 'Anonimo',
-      giftName: data.giftName || data.extendedGiftInfo?.name || 'Presente',
-      giftId: data.giftId,
-      count: data.repeatCount || data.comboCount || 1,
-      diamondCount: data.diamondCount || 0,
-      avatar: data.profilePictureUrl || ''
-    });
-  });
 
-  tiktokClient.on('like', (data) => {
-    broadcast({
-      type: 'like',
-      nickname: data.uniqueId || data.nickname || 'Anonimo',
-      count: data.likeCount || 1,
-      avatar: data.profilePictureUrl || ''
-    });
-  });
-
-  tiktokClient.on('member', (data) => {
-    broadcast({
-      type: 'follow',
-      nickname: data.uniqueId || data.nickname || 'Anonimo',
-      avatar: data.profilePictureUrl || ''
-    });
-  });
-
-  tiktokClient.on('share', (data) => {
-    broadcast({
-      type: 'share',
-      nickname: data.uniqueId || data.nickname || 'Anonimo',
-      avatar: data.profilePictureUrl || ''
-    });
-  });
-
-  await tiktokClient.connect();
-}
-
-app.post('/connect', async (req, res) => {
-  const { username } = req.body;
-  if (!username) return res.status(400).json({ error: 'username obrigatorio' });
-
-  try {
-    await connectTikTok(username);
-    res.json({ success: true, message: 'Conectado a @' + username.replace('@', '') });
-  } catch (err) {
-    console.error('[BRIDGE] Falha ao conectar:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/disconnect', async (req, res) => {
-  if (tiktokClient) {
-    await tiktokClient.disconnect();
-    tiktokClient = null;
-  }
-  res.json({ success: true });
-});
-
-app.get('/health', (req, res) => {
-  let connected = false;
-  if (tiktokClient) {
-    try { connected = tiktokClient.state === 'CONNECTED' || tiktokClient._connectState === 'CONNECTED'; } catch {}
-  }
-  res.json({
-    ok: true,
-    tiktokConnected: connected,
-    clients: clients.size,
-    uptime: process.uptime()
-  });
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log('[BRIDGE] Servidor rodando na porta ' + PORT);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('[BRIDGE] Servidor rodando na porta', PORT);
   console.log('[BRIDGE] Health: http://localhost:' + PORT + '/health');
   console.log('[BRIDGE] WebSocket: ws://localhost:' + PORT + '/');
 });
