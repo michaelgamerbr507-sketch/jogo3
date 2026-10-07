@@ -81,7 +81,8 @@ tiktokClient.on('chat', (data) => {
   const nickname = user.uniqueId || user.nickname || user.unique_id || user.userName || user.name || 'Anonimo';
   const comment = data.text || data.comment || data.content || user.comment || '';
 
-  const avatar = user.avatarThumb
+  // Extrai avatar bruto (pode vir string ou objeto)
+  const rawAvatar = user.avatarThumb
     || user.avatarMedium
     || user.avatarLarge
     || user.avatarUrl
@@ -92,6 +93,10 @@ tiktokClient.on('chat', (data) => {
     || (user.profile && user.profile.avatarMedium)
     || (user.profile && user.profile.avatarUrl)
     || '';
+
+  // FORÃ‡A STRING - se vier objeto, extrai URL
+  const avatar = typeof rawAvatar === 'string' ? rawAvatar
+    : (rawAvatar?.url || rawAvatar?.uri || rawAvatar?.href || rawAvatar?.download_url || '');
 
   const userId = user.userId || user.id || user.user_id || data.userId || '';
 
