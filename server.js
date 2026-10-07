@@ -52,8 +52,8 @@ wss.on('connection', (ws) => {
 
 app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));
 
-const tiktokClient = new TikTokLiveConnection({
-  uniqueId: TIKTOK_USERNAME,
+// Construtor: uniqueId como 1º argumento posicional
+const tiktokClient = new TikTokLiveConnection(TIKTOK_USERNAME, {
   processInitialData: true
 });
 
@@ -66,7 +66,8 @@ tiktokClient.connect().then(() => {
   console.error('[BRIDGE] Erro ao conectar:', err.message);
   broadcast({ type: 'bridge_status', connected: false, error: err.message });
 });
-                                                                                                                 tiktokClient.on('*', (eventName, data) => {
+
+tiktokClient.on('*', (eventName, data) => {
   console.log('[BRIDGE DEBUG] Evento:', eventName, JSON.stringify(data).slice(0, 300));
 });
 
