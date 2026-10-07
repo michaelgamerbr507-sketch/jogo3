@@ -76,25 +76,26 @@ async function connectTikTok(username) {
 tiktokClient.on('chat', (data) => {
   console.log('[BRIDGE] Chat data completo:', JSON.stringify(data, null, 2));
 
-  // Extrai avatar de todos os campos possÃ­veis
-  const avatar = data.profilePictureUrl
-    || data.avatar
-    || data.profilePicture
-    || (data.profile && data.profile.avatar)
-    || (data.profile && data.profile.picture)
-    || (data.profile && data.profile.profilePictureUrl)
-    || (data.data && data.data.profilePictureUrl)
-    || (data.data && data.data.avatar)
+  // TikTok envia dados aninhados - tenta mÃºltiplos caminhos
+  const user = data.user || data.sender || data.profile || data.data || data;
+
+  const nickname = user.uniqueId || user.nickname || user.unique_id || user.userName || user.name || 'Anonimo';
+  const comment = data.text || data.comment || data.content || user.comment || '';
+
+  // Avatar: TikTok usa avatarThumb, avatarMedium, avatarLarge, avatarUrl, profilePictureUrl
+  const avatar = user.avatarThumb
+    || user.avatarMedium
+    || user.avatarLarge
+    || user.avatarUrl
+    || user.profilePictureUrl
+    || user.avatar
+    || user.profilePicture
+    || (user.profile && user.profile.avatarThumb)
+    || (user.profile && user.profile.avatarMedium)
+    || (user.profile && user.profile.avatarUrl)
     || '';
 
-  // Extrai nickname
-  const nickname = data.uniqueId || data.nickname || data.unique_id
-    || (data.profile && data.profile.nickname)
-    || (data.data && data.data.uniqueId)
-    || (data.data && data.data.nickname)
-    || 'Anonimo';
-
-  const comment = data.comment || (data.data && data.data.comment) || '';
+  const userId = user.userId || user.id || user.user_id || data.userId || '';
 
   console.log('[BRIDGE] Enviando:', { type: 'comment', nickname, comment, avatar });
 
@@ -103,7 +104,7 @@ tiktokClient.on('chat', (data) => {
     nickname,
     comment,
     avatar,
-    userId: data.userId
+    userId
   });
 });
   tiktokClient.on('gift', (data) => {
