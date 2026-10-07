@@ -76,13 +76,11 @@ async function connectTikTok(username) {
 tiktokClient.on('chat', (data) => {
   console.log('[BRIDGE] Chat data completo:', JSON.stringify(data, null, 2));
 
-  // TikTok envia dados aninhados - tenta mÃºltiplos caminhos
   const user = data.user || data.sender || data.profile || data.data || data;
 
   const nickname = user.uniqueId || user.nickname || user.unique_id || user.userName || user.name || 'Anonimo';
   const comment = data.text || data.comment || data.content || user.comment || '';
 
-  // Avatar: TikTok usa avatarThumb, avatarMedium, avatarLarge, avatarUrl, profilePictureUrl
   const avatar = user.avatarThumb
     || user.avatarMedium
     || user.avatarLarge
