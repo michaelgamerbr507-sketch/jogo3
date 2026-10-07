@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 import { WebSocketServer } from 'ws';
-import { TikTokLiveConnector } from 'tiktok-live-connector';
+import TikTokLiveConnector from 'tiktok-live-connector';
 
 const app = express();
 const server = http.createServer(app);
