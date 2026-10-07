@@ -73,16 +73,39 @@ async function connectTikTok(username) {
     broadcast({ type: 'bridge_status', status: 'error', error: err.message });
   });
 
-  tiktokClient.on('chat', (data) => {
-    broadcast({
-      type: 'comment',
-      nickname: data.uniqueId || data.nickname || 'Anonimo',
-      comment: data.comment,
-      avatar: data.profilePictureUrl || '',
-      userId: data.userId
-    });
-  });
+tiktokClient.on('chat', (data) => {
+  console.log('[BRIDGE] Chat data completo:', JSON.stringify(data, null, 2));
 
+  // Extrai avatar de todos os campos possÃ­veis
+  const avatar = data.profilePictureUrl
+    || data.avatar
+    || data.profilePicture
+    || (data.profile && data.profile.avatar)
+    || (data.profile && data.profile.picture)
+    || (data.profile && data.profile.profilePictureUrl)
+    || (data.data && data.data.profilePictureUrl)
+    || (data.data && data.data.avatar)
+    || '';
+
+  // Extrai nickname
+  const nickname = data.uniqueId || data.nickname || data.unique_id
+    || (data.profile && data.profile.nickname)
+    || (data.data && data.data.uniqueId)
+    || (data.data && data.data.nickname)
+    || 'Anonimo';
+
+  const comment = data.comment || (data.data && data.data.comment) || '';
+
+  console.log('[BRIDGE] Enviando:', { type: 'comment', nickname, comment, avatar });
+
+  broadcast({
+    type: 'comment',
+    nickname,
+    comment,
+    avatar,
+    userId: data.userId
+  });
+});
   tiktokClient.on('gift', (data) => {
     broadcast({
       type: 'gift',
