@@ -71,32 +71,48 @@ tiktokClient.on('*', (eventName, data) => {
   console.log('[BRIDGE DEBUG] Evento:', eventName, JSON.stringify(data).slice(0, 300));
 });
 
+// Helper: extrai URL do avatar do formato ImageModel { urlList: [...] } do tiktok-live-connector v2.5+
+function extractAvatarUrl(user) {
+  if (!user) return '';
+
+  // Ordem de prioridade: avatarThumb > avatarMedium > avatarLarge > profilePictureUrl (legacy)
+  const avatarSources = [
+    user.avatarThumb,
+    user.avatarMedium,
+    user.avatarLarge,
+    user.profilePictureUrl
+  ];
+
+  for (const source of avatarSources) {
+    if (!source) continue;
+    // ImageModel tem urlList: string[]
+    if (source.urlList && Array.isArray(source.urlList) && source.urlList.length > 0) {
+      return source.urlList[0];
+    }
+    // Fallback se vier como string direta (versões antigas)
+    if (typeof source === 'string' && source.startsWith('http')) {
+      return source;
+    }
+    // Fallback se vier com url/uri direto
+    if (source.url) return source.url;
+    if (source.uri) return source.uri;
+  }
+  return '';
+}
+
 tiktokClient.on('chat', (data) => {
   console.log('[BRIDGE] Chat data completo:', JSON.stringify(data, null, 2));
 
   const user = data.user || data.sender || data.profile || data.data || data;
 
-  const nickname = user.uniqueId || user.nickname || user.unique_id || user.userName || user.name || 'Anonimo';
+  const nickname = user.uniqueId || user.nickname || user.unique_id || user.userName || user.name || user.displayId || 'Anonimo';
   const comment = data.text || data.comment || data.content || user.comment || '';
 
-  const rawAvatar = user.avatarThumb
-    || user.avatarMedium
-    || user.avatarLarge
-    || user.avatarUrl
-    || user.profilePictureUrl
-    || user.avatar
-    || user.profilePicture
-    || (user.profile && user.profile.avatarThumb)
-    || (user.profile && user.profile.avatarMedium)
-    || (user.profile && user.profile.avatarUrl)
-    || '';
+  const avatar = extractAvatarUrl(user);
 
-  const avatar = typeof rawAvatar === 'string' ? rawAvatar
-    : (rawAvatar?.url || rawAvatar?.uri || rawAvatar?.href || rawAvatar?.download_url || '');
+  const userId = user.userId || user.id || user.user_id || user.idStr || data.userId || '';
 
-  const userId = user.userId || user.id || user.user_id || data.userId || '';
-
-  console.log('[BRIDGE] Enviando:', { type: 'comment', nickname, comment, avatar });
+  console.log('[BRIDGE] Enviando:', { type: 'comment', nickname, comment, avatar: avatar ? 'OK' : 'VAZIO' });
 
   broadcast({
     type: 'comment',
