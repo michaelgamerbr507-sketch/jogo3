@@ -43,7 +43,6 @@ wss.on('connection', (ws) => {
   clients.add(ws);
   console.log('[BRIDGE] Cliente conectado. Total:', clients.size);
   ws.send(JSON.stringify({ type: 'bridge_status', connected: true }));
-
   ws.on('close', () => {
     clients.delete(ws);
     console.log('[BRIDGE] Cliente desconectado. Total:', clients.size);
@@ -51,6 +50,17 @@ wss.on('connection', (ws) => {
 });
 
 app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));
+
+// ==================== PORT BIND PRIMEIRO (Render requirement) ====================
+server.listen(PORT, '0.0.0.0', (err) => {
+  if (err) {
+    console.error('[BRIDGE] ❌ ERRO PORT BIND:', err.message);                                                       process.exit(1);
+  }
+  console.log('[BRIDGE] ✅ HTTP/WS listening on 0.0.0.0:' + PORT);
+  console.log('[BRIDGE] Health: http://0.0.0.0:' + PORT + '/health');
+  console.log('[BRIDGE] WebSocket: ws://0.0.0.0:' + PORT + '/');
+});
+// ================================================================================
 
 const tiktokClient = new TikTokLiveConnection(TIKTOK_USERNAME, {
   processInitialData: true
@@ -91,3 +101,14 @@ function extractAvatarUrl(user) {
   }
   return '';
 }
+
+tiktokClient.on('chat', (data) => {
+  console.log('[BRIDGE] Chat data completo:', JSON.stringify(data, null, 2));
+  const user = data.user || data.sender || data.profile || data.data || data;
+  const nickname = user.uniqueId || user.nickname || user.unique_id || user.userName || user.name || user.displayId || 'Anonimo';
+  const comment = data.text || data.comment || data.content || user.comment || '';
+  const avatar = extractAvatarUrl(user);
+  const userId = user.userId || user.id || user.user_id || user.idStr || data.userId || '';
+  console.log('[BRIDGE] Enviando:', { type: 'comment', nickname, comment, avatar: avatar ? 'OK' : 'VAZIO' });
+  broadcast({ type: 'comment', nickname, comment, avatar, userId });
+});
