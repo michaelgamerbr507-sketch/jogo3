@@ -3,7 +3,8 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import * as tiktok from 'tiktok-live-connector';
 
-console.log('[BRIDGE] Exports do tiktok-live-connector:', Object.keys(tiktok));                                                                                                 
+console.log('[BRIDGE] Exports do tiktok-live-connector:', Object.keys(tiktok));
+
 const TikTokLiveConnection =
   tiktok.TikTokLiveConnection ||
   tiktok.TikTokLiveConnector ||
@@ -27,15 +28,14 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 10000;
-const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || 'truecrimevideosreal';
+const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || 'ilustramichael';
 
 let clients = new Set();
 
 function broadcast(msg) {
   const data = JSON.stringify(msg);
   clients.forEach(ws => {
-    if (ws.readyState === 1) ws.send(data);
-  });
+    if (ws.readyState === 1) ws.send(data);                                                                                                                     });
 }
 
 wss.on('connection', (ws) => {
@@ -52,8 +52,7 @@ wss.on('connection', (ws) => {
 app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));
 
 // Construtor: uniqueId como 1º argumento posicional
-const tiktokClient = new TikTokLiveConnection(TIKTOK_USERNAME, {
-  processInitialData: true
+const tiktokClient = new TikTokLiveConnection(TIKTOK_USERNAME, {                                                                                                processInitialData: true
 });
 
 console.log('[BRIDGE] Conectando ao TikTok:', TIKTOK_USERNAME);
@@ -120,10 +119,4 @@ tiktokClient.on('chat', (data) => {
     avatar,
     userId
   });
-});
-
-server.listen(PORT, '0.0.0.0', () => {
-  console.log('[BRIDGE] Servidor rodando na porta', PORT);
-  console.log('[BRIDGE] Health: http://localhost:' + PORT + '/health');
-  console.log('[BRIDGE] WebSocket: ws://localhost:' + PORT + '/');
 });
