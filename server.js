@@ -2,16 +2,14 @@ import express from 'express';
 import http from 'http';
 import { WebSocketServer } from 'ws';
 import * as tiktok from 'tiktok-live-connector';
-
-console.log('[BRIDGE] Exports do tiktok-live-connector:', Object.keys(tiktok));
+                                                                                                                          console.log('[BRIDGE] Exports do tiktok-live-connector:', Object.keys(tiktok));
 
 const TikTokLiveConnection =
   tiktok.TikTokLiveConnection ||
   tiktok.TikTokLiveConnector ||
   tiktok.TikTokLiveClient ||
   tiktok.TikTokLive ||
-  tiktok.LiveConnector ||
-  tiktok.Connector ||
+  tiktok.LiveConnector ||                                                                                                   tiktok.Connector ||
   tiktok.default ||
   tiktok;
 
@@ -36,9 +34,7 @@ function broadcast(msg) {
   clients.forEach(ws => {
     if (ws.readyState === 1) ws.send(data);
   });
-}
-
-wss.on('connection', (ws) => {
+}                                                                                                                                                                                                                                                   wss.on('connection', (ws) => {
   clients.add(ws);
   console.log('[BRIDGE] Cliente conectado. Total:', clients.size);
   ws.send(JSON.stringify({ type: 'bridge_status', connected: true }));
@@ -48,9 +44,9 @@ wss.on('connection', (ws) => {
   });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));
-
-// ==================== PORT BIND PRIMEIRO (Render requirement) ====================                             server.listen(PORT, '0.0.0.0', (err) => {
+app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));                                          
+// ==================== PORT BIND PRIMEIRO (Render requirement) ====================
+server.listen(PORT, '0.0.0.0', (err) => {
   if (err) {
     console.error('[BRIDGE] ❌ ERRO PORT BIND:', err.message);
     process.exit(1);
@@ -83,8 +79,7 @@ app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));
     const avatarSources = [
       user.avatarThumb,
       user.avatarMedium,
-      user.avatarLarge,
-      user.profilePictureUrl
+      user.avatarLarge,                                                                                                         user.profilePictureUrl
     ];
     for (const source of avatarSources) {
       if (!source) continue;
@@ -93,10 +88,12 @@ app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));
       }
       if (typeof source === 'string' && source.startsWith('http')) {
         return source;
-      }                                                                                                                if (source.url) return source.url;
+      }
+      if (source.url) return source.url;
       if (source.uri) return source.uri;
     }
-    return '';                                                                                                     }
+    return '';
+  }
 
   tiktokClient.on('chat', (data) => {
     console.log('[BRIDGE] Chat data completo:', JSON.stringify(data, null, 2));
