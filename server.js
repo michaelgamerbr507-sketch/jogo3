@@ -28,7 +28,7 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 10000;
-const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || 'ilustramichael';
+const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || 'truecrimevideosreal';
 
 let clients = new Set();
 
