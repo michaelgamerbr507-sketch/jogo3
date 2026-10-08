@@ -28,7 +28,7 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 10000;
-const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || 'ilustramichael';
+const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || 'truecrimevideosreal';
 
 let clients = new Set();
 
@@ -52,7 +52,6 @@ wss.on('connection', (ws) => {
 
 app.get('/health', (req, res) => res.json({ ok: true, clients: clients.size }));
 
-// Construtor: uniqueId como 1º argumento posicional
 const tiktokClient = new TikTokLiveConnection(TIKTOK_USERNAME, {
   processInitialData: true
 });
@@ -71,60 +70,24 @@ tiktokClient.on('*', (eventName, data) => {
   console.log('[BRIDGE DEBUG] Evento:', eventName, JSON.stringify(data).slice(0, 300));
 });
 
-// Helper: extrai URL do avatar do formato ImageModel { urlList: [...] } do tiktok-live-connector v2.5+
 function extractAvatarUrl(user) {
   if (!user) return '';
-
-  // Ordem de prioridade: avatarThumb > avatarMedium > avatarLarge > profilePictureUrl (legacy)
   const avatarSources = [
     user.avatarThumb,
     user.avatarMedium,
     user.avatarLarge,
     user.profilePictureUrl
   ];
-
   for (const source of avatarSources) {
     if (!source) continue;
-    // ImageModel tem urlList: string[]
     if (source.urlList && Array.isArray(source.urlList) && source.urlList.length > 0) {
       return source.urlList[0];
     }
-    // Fallback se vier como string direta (versões antigas)
     if (typeof source === 'string' && source.startsWith('http')) {
       return source;
     }
-    // Fallback se vier com url/uri direto
     if (source.url) return source.url;
     if (source.uri) return source.uri;
   }
   return '';
 }
-
-tiktokClient.on('chat', (data) => {
-  console.log('[BRIDGE] Chat data completo:', JSON.stringify(data, null, 2));
-
-  const user = data.user || data.sender || data.profile || data.data || data;
-
-  const nickname = user.uniqueId || user.nickname || user.unique_id || user.userName || user.name || user.displayId || 'Anonimo';
-  const comment = data.text || data.comment || data.content || user.comment || '';
-
-  const avatar = extractAvatarUrl(user);
-
-  const userId = user.userId || user.id || user.user_id || user.idStr || data.userId || '';
-
-  console.log('[BRIDGE] Enviando:', { type: 'comment', nickname, comment, avatar: avatar ? 'OK' : 'VAZIO' });
-
-  broadcast({
-    type: 'comment',
-    nickname,
-    comment,
-    avatar,
-    userId
-  });
-});
-
-server.listen(PORT, '0.0.0.0', () => {
-  console.log('[BRIDGE] Servidor rodando na porta', PORT);
-  console.log('[BRIDGE] Health: http://localhost:' + PORT + '/health');
-  console.log('[BRIDGE] WebSocket: ws://localhost:' + PORT + '/');
-});
